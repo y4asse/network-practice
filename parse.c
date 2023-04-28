@@ -163,10 +163,12 @@ void statement(void)
 	if (tok.attr == IDENTIFIER)
 	{
 		int memoryAddress;
-		for (int i = 0; i < sizeof(s_table); i++)
+		for (int i = 0; i < sizeof(s_table) / sizeof s_table[0]; i++)
 		{
-			if (strcmp(tok.charvalue, s_table[i].v))
+			if (strcmp(s_table[i].v, tok.charvalue) == 0)
+			{
 				memoryAddress = s_table[i].addr;
+			}
 		}
 
 		getsym();
@@ -175,10 +177,11 @@ void statement(void)
 		{
 			getsym();
 			expression();
-			// fprintf(outfile, "store r0 %d", memoryAddress);
+			fprintf(outfile, "store r0, %d\n", memoryAddress);
 		}
 		else if (tok.attr == SYMBOL && tok.value == LPAREN)
 		{
+			getsym();
 			parmlist();
 		}
 		else
@@ -239,10 +242,26 @@ void statement(void)
 		do
 		{
 			getsym();
-
-			if (tok.attr == IDENTIFIER)
+			if (tok.attr == NUMBER)
 			{
-				// 出力するコード
+				fprintf(outfile, "loadi r0, %d\n", tok.value);
+				fprintf(outfile, "writed r0\n");
+				fprintf(outfile, "loadi r1,'\\n'\n");
+				fprintf(outfile, "writec r1\n");
+				getsym();
+			}
+			else if (tok.attr == IDENTIFIER)
+			{
+				for (int i = 0; i < sizeof(s_table) / sizeof s_table[0]; i++)
+				{
+					if (strcmp(s_table[i].v, tok.charvalue) == 0)
+					{
+						fprintf(outfile, "load r0, %d\n", s_table[i].addr);
+					}
+				}
+				fprintf(outfile, "writed r0\n");
+				fprintf(outfile, "loadi r1,'\\n'\n");
+				fprintf(outfile, "writec r1\n");
 				getsym();
 			}
 			else
@@ -277,22 +296,19 @@ void expression(void)
 	// else
 	// 	error("Number or Identifier is needed");
 
-	if (tok.attr == NUMBER || tok.attr == IDENTIFIER)
+	if (tok.attr == NUMBER)
 	{
+		fprintf(outfile, "loadi r0, %d\n", tok.value);
 		getsym();
 		if (tok.attr == SYMBOL)
 		{
 			switch (tok.value)
 			{
-				// それぞれに対してchar配列を取得する
 			case PLUS:
 				getsym();
-				if (tok.attr == NUMBER || IDENTIFIER)
+				if (tok.attr == NUMBER)
 				{
 					fprintf(outfile, "addi r0, %d\n", tok.value);
-					fprintf(outfile, "writed r0\n");
-					fprintf(outfile, "loadi r1,'\\n'\n");
-					fprintf(outfile, "writec r1\n");
 					getsym();
 				}
 				else
@@ -302,12 +318,9 @@ void expression(void)
 				break;
 			case MINUS:
 				getsym();
-				if (tok.attr == NUMBER || IDENTIFIER)
+				if (tok.attr == NUMBER)
 				{
 					fprintf(outfile, "subi r0, %d\n", tok.value);
-					fprintf(outfile, "writed r0\n");
-					fprintf(outfile, "loadi r1,'\\n'\n");
-					fprintf(outfile, "writec r1\n");
 					getsym();
 				}
 				else
@@ -317,12 +330,20 @@ void expression(void)
 				break;
 			case TIMES:
 				getsym();
-				if (tok.attr == NUMBER || IDENTIFIER)
+				if (tok.attr == NUMBER)
 				{
 					fprintf(outfile, "muli r0, %d\n", tok.value);
-					fprintf(outfile, "writed r0\n");
-					fprintf(outfile, "loadi r1,'\\n'\n");
-					fprintf(outfile, "writec r1\n");
+					getsym();
+				}
+				else if (tok.attr == IDENTIFIER)
+				{
+					for (int i = 0; i < sizeof(s_table) / sizeof s_table[0]; i++)
+					{
+						if (strcmp(s_table[i].v, tok.charvalue) == 0)
+						{
+							fprintf(outfile, "mul r0, %d\n", s_table[i].addr);
+						}
+					}
 					getsym();
 				}
 				else
@@ -337,12 +358,9 @@ void expression(void)
 		else if (tok.attr == RWORD && tok.value == DIV)
 		{
 			getsym();
-			if (tok.attr == NUMBER || IDENTIFIER)
+			if (tok.attr == NUMBER)
 			{
 				fprintf(outfile, "divi r0, %d\n", tok.value);
-				fprintf(outfile, "writed r0\n");
-				fprintf(outfile, "loadi r1,'\\n'\n");
-				fprintf(outfile, "writec r1\n");
 				getsym();
 			}
 			else
@@ -353,6 +371,16 @@ void expression(void)
 		else
 			error("symbol or div is needed.");
 	}
+	else if (tok.attr == IDENTIFIER)
+	{
+		for (int i = 0; i < sizeof(s_table) - 1; i++)
+		{
+			if (strcmp(tok.charvalue, s_table[i].v))
+				fprintf(outfile, "load r0 %d", s_table[i].addr);
+		}
+	}
+	else
+		error("Number or Identifier is needed");
 }
 
 void parmlist(void)
