@@ -14,7 +14,8 @@ typedef struct
 } s_entry;
 
 s_entry s_table[32];
-int count = 0;
+int tableIndex = 0;
+int labelNumber = 0;
 
 void error(char *s);
 void statement(void);
@@ -71,10 +72,6 @@ void error(char *s)
 	exit(1);
 }
 
-//
-// Parser
-//
-
 void outblock(void)
 {
 	if (tok.attr == RWORD && tok.value == VAR)
@@ -84,10 +81,10 @@ void outblock(void)
 			getsym();
 			if (tok.attr == IDENTIFIER)
 			{
-				s_table[count].addr = count;
-				strcpy(s_table[count].v, tok.charvalue);
+				s_table[tableIndex].addr = tableIndex;
+				strcpy(s_table[tableIndex].v, tok.charvalue);
 				fprintf(outfile, "loadi r0, 0\n");
-				fprintf(outfile, "store r0, %d\n", count++);
+				fprintf(outfile, "store r0, %d\n", tableIndex++);
 				getsym();
 			}
 			else
@@ -138,26 +135,6 @@ void inblock(void)
 		statement();
 }
 
-// void var_declaration(void)
-// {
-// 	do
-// 	{
-// 		getsym();
-
-// 		if (tok.attr == IDENTIFIER)
-// 		{
-// 			getsym();
-
-// 			if (tok.attr == SYMBOL && tok.value == SEMICOLON)
-// 				getsym();
-// 			else
-// 				error("Semicolon is needed.");
-// 		}
-// 		else
-// 			error("Variable name is needed.");
-// 	} while (tok.attr == IDENTIFIER);
-// }
-
 void statement(void)
 {
 	if (tok.attr == IDENTIFIER)
@@ -207,6 +184,8 @@ void statement(void)
 	}
 	else if (tok.attr == RWORD && tok.value == IF)
 	{
+		labelNumber += 2;
+		int localNumber = labelNumber;
 		getsym();
 		condition();
 
@@ -214,18 +193,24 @@ void statement(void)
 		{
 			getsym();
 			statement();
+			fprintf(outfile, "jmp L%d\n", localNumber -1);
+			fprintf(outfile, "L%d:\n", localNumber - 2);
 
 			if (tok.attr == RWORD && tok.value == ELSE)
 			{
 				getsym();
 				statement();
 			}
+			fprintf(outfile, "L%d:\n", localNumber -1);
 		}
 		else
 			error("Then is needed.");
 	}
 	else if (tok.attr == RWORD && tok.value == WHILE)
 	{
+		labelNumber += 2;
+		int localNumber = labelNumber;
+		fprintf(outfile, "L%d:\n", localNumber - 1);
 		getsym();
 		condition();
 
@@ -233,6 +218,8 @@ void statement(void)
 		{
 			getsym();
 			statement();
+			fprintf(outfile, "jmp L%d\n", localNumber - 1);
+			fprintf(outfile, "L%d:\n", localNumber - 2);
 		}
 		else
 			error("Do is needed.");
@@ -246,8 +233,8 @@ void statement(void)
 			{
 				fprintf(outfile, "loadi r0, %d\n", tok.value);
 				fprintf(outfile, "writed r0\n");
-				fprintf(outfile, "loadi r1,'\\n'\n");
-				fprintf(outfile, "writec r1\n");
+				fprintf(outfile, "loadi r0,'\\n'\n");
+				fprintf(outfile, "writec r0\n");
 				getsym();
 			}
 			else if (tok.attr == IDENTIFIER)
@@ -260,8 +247,8 @@ void statement(void)
 					}
 				}
 				fprintf(outfile, "writed r0\n");
-				fprintf(outfile, "loadi r1,'\\n'\n");
-				fprintf(outfile, "writec r1\n");
+				fprintf(outfile, "loadi r0,'\\n'\n");
+				fprintf(outfile, "writec r0\n");
 				getsym();
 			}
 			else
@@ -274,27 +261,6 @@ void statement(void)
 
 void expression(void)
 {
-	// if (tok.attr == NUMBER)
-	// {
-	// 	fprintf(outfile, "loadi r0 %d", tok.value);
-	// 	getsym();
-	// 	if (tok.attr == SYMBOL)
-	// 	{
-	// 	}
-	// }
-	// else if (tok.attr == IDENTIFIER)
-	// {
-	// 	int memoryAddress;
-	// 	for (int i = 0; i < sizeof(s_table); i++)
-	// 	{
-	// 		if (strcmp(tok.charvalue, s_table[i].v))
-	// 			memoryAddress = s_table[i].addr;
-	// 	}
-	// 	fprintf(outfile, "load r0 %d", memoryAddress);
-	// 	getsym();
-	// }
-	// else
-	// 	error("Number or Identifier is needed");
 
 	if (tok.attr == NUMBER)
 	{
@@ -311,6 +277,17 @@ void expression(void)
 					fprintf(outfile, "addi r0, %d\n", tok.value);
 					getsym();
 				}
+				else if (tok.attr == IDENTIFIER)
+				{
+					for (int i = 0; i < sizeof(s_table) / sizeof s_table[0]; i++)
+					{
+						if (strcmp(s_table[i].v, tok.charvalue) == 0)
+						{
+							fprintf(outfile, "add r0, %d\n", s_table[i].addr);
+						}
+					}
+					getsym();
+				}
 				else
 				{
 					error("Second operand should be a number or identifier.");
@@ -321,6 +298,17 @@ void expression(void)
 				if (tok.attr == NUMBER)
 				{
 					fprintf(outfile, "subi r0, %d\n", tok.value);
+					getsym();
+				}
+				else if (tok.attr == IDENTIFIER)
+				{
+					for (int i = 0; i < sizeof(s_table) / sizeof s_table[0]; i++)
+					{
+						if (strcmp(s_table[i].v, tok.charvalue) == 0)
+						{
+							fprintf(outfile, "sub r0, %d\n", s_table[i].addr);
+						}
+					}
 					getsym();
 				}
 				else
@@ -363,20 +351,133 @@ void expression(void)
 				fprintf(outfile, "divi r0, %d\n", tok.value);
 				getsym();
 			}
+			else if (tok.attr == IDENTIFIER)
+			{
+				for (int i = 0; i < sizeof(s_table) / sizeof s_table[0]; i++)
+				{
+					if (strcmp(s_table[i].v, tok.charvalue) == 0)
+					{
+						fprintf(outfile, "div r0, %d\n", s_table[i].addr);
+					}
+				}
+				getsym();
+			}
 			else
 			{
 				error("Second operand should be a number or identifier.");
 			}
 		}
-		else
-			error("symbol or div is needed.");
 	}
 	else if (tok.attr == IDENTIFIER)
 	{
-		for (int i = 0; i < sizeof(s_table) - 1; i++)
+		for (int i = 0; i < sizeof(s_table) / sizeof s_table[0]; i++)
 		{
-			if (strcmp(tok.charvalue, s_table[i].v))
-				fprintf(outfile, "load r0 %d", s_table[i].addr);
+			if (strcmp(s_table[i].v, tok.charvalue) == 0)
+			{
+				fprintf(outfile, "load r0, %d\n", s_table[i].addr);
+			}
+		}
+		getsym();
+		if (tok.attr == SYMBOL)
+		{
+			switch (tok.value)
+			{
+			case PLUS:
+				getsym();
+				if (tok.attr == NUMBER)
+				{
+					fprintf(outfile, "addi r0, %d\n", tok.value);
+					getsym();
+				}
+				else if (tok.attr == IDENTIFIER)
+				{
+					for (int i = 0; i < sizeof(s_table) / sizeof s_table[0]; i++)
+					{
+						if (strcmp(s_table[i].v, tok.charvalue) == 0)
+						{
+							fprintf(outfile, "add r0, %d\n", s_table[i].addr);
+						}
+					}
+					getsym();
+				}
+				else
+				{
+					error("Second operand should be a number or identifier.");
+				}
+				break;
+			case MINUS:
+				getsym();
+				if (tok.attr == NUMBER)
+				{
+					fprintf(outfile, "subi r0, %d\n", tok.value);
+					getsym();
+				}
+				else if (tok.attr == IDENTIFIER)
+				{
+					for (int i = 0; i < sizeof(s_table) / sizeof s_table[0]; i++)
+					{
+						if (strcmp(s_table[i].v, tok.charvalue) == 0)
+						{
+							fprintf(outfile, "sub r0, %d\n", s_table[i].addr);
+						}
+					}
+					getsym();
+				}
+				else
+				{
+					error("Second operand should be a number or identifier.");
+				}
+				break;
+			case TIMES:
+				getsym();
+				if (tok.attr == NUMBER)
+				{
+					fprintf(outfile, "muli r0, %d\n", tok.value);
+					getsym();
+				}
+				else if (tok.attr == IDENTIFIER)
+				{
+					for (int i = 0; i < sizeof(s_table) / sizeof s_table[0]; i++)
+					{
+						if (strcmp(s_table[i].v, tok.charvalue) == 0)
+						{
+							fprintf(outfile, "mul r0, %d\n", s_table[i].addr);
+						}
+					}
+					getsym();
+				}
+				else
+				{
+					error("Second operand should be a number or identifier.");
+				}
+				break;
+			default:
+				break;
+			}
+		}
+		else if (tok.attr == RWORD && tok.value == DIV)
+		{
+			getsym();
+			if (tok.attr == NUMBER)
+			{
+				fprintf(outfile, "divi r0, %d\n", tok.value);
+				getsym();
+			}
+			else if (tok.attr == IDENTIFIER)
+			{
+				for (int i = 0; i < sizeof(s_table) / sizeof s_table[0]; i++)
+				{
+					if (strcmp(s_table[i].v, tok.charvalue) == 0)
+					{
+						fprintf(outfile, "div r0, %d\n", s_table[i].addr);
+					}
+				}
+				getsym();
+			}
+			else
+			{
+				error("Second operand should be a number or identifier.");
+			}
 		}
 	}
 	else
@@ -407,23 +508,44 @@ void parmlist(void)
 void condition(void)
 {
 	expression();
-
+	fprintf(outfile, "loadi r1, 0\n");
+	fprintf(outfile, "addr r1, r0\n");
 	if (tok.attr == SYMBOL)
 	{
+		char comp[10];
 		switch (tok.value)
 		{
 		case LESSTHAN:
+			strcpy(comp, "jge");
+			getsym();
+			break;
 		case LESSEQL:
+			strcpy(comp, "jgt");
+			getsym();
+			break;
 		case EQL:
+			strcpy(comp, "jnz");
+			getsym();
+			break;
 		case NOTEQL:
+			strcpy(comp, "jz");
+			getsym();
+			break;
 		case GRTRTHAN:
+			strcpy(comp, "jle");
+			getsym();
+			break;
 		case GRTREQL:
+			strcpy(comp, "jlt");
+			getsym();
+			break;
 		default:
-			// その他の場合の処理
+			error("Relational operator is needed.");
 			break;
 		}
-		getsym();
 		expression();
+		fprintf(outfile, "cmpr r1, r0\n");
+		fprintf(outfile, "%s L%d\n", comp, labelNumber - 2);
 	}
 	else
 		error("Relational operator is needed.");
