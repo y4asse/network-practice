@@ -145,6 +145,11 @@ void statement(void)
 			if (strcmp(s_table[i].v, tok.charvalue) == 0)
 			{
 				memoryAddress = s_table[i].addr;
+				break;
+			}
+			if (i == sizeof(s_table) / sizeof s_table[0] - 1)
+			{
+				error("Undeclared variable is used");
 			}
 		}
 
@@ -193,7 +198,7 @@ void statement(void)
 		{
 			getsym();
 			statement();
-			fprintf(outfile, "jmp L%d\n", localNumber -1);
+			fprintf(outfile, "jmp L%d\n", localNumber - 1);
 			fprintf(outfile, "L%d:\n", localNumber - 2);
 
 			if (tok.attr == RWORD && tok.value == ELSE)
@@ -201,7 +206,7 @@ void statement(void)
 				getsym();
 				statement();
 			}
-			fprintf(outfile, "L%d:\n", localNumber -1);
+			fprintf(outfile, "L%d:\n", localNumber - 1);
 		}
 		else
 			error("Then is needed.");
@@ -244,6 +249,11 @@ void statement(void)
 					if (strcmp(s_table[i].v, tok.charvalue) == 0)
 					{
 						fprintf(outfile, "load r0, %d\n", s_table[i].addr);
+						break;
+					}
+					if (i == sizeof(s_table) / sizeof s_table[0] - 1)
+					{
+						error("Undeclared variable is used");
 					}
 				}
 				fprintf(outfile, "writed r0\n");
@@ -284,6 +294,11 @@ void expression(void)
 						if (strcmp(s_table[i].v, tok.charvalue) == 0)
 						{
 							fprintf(outfile, "add r0, %d\n", s_table[i].addr);
+							break;
+						}
+						if (i == sizeof(s_table) / sizeof s_table[0] - 1)
+						{
+							error("Undeclared variable is used");
 						}
 					}
 					getsym();
@@ -307,6 +322,11 @@ void expression(void)
 						if (strcmp(s_table[i].v, tok.charvalue) == 0)
 						{
 							fprintf(outfile, "sub r0, %d\n", s_table[i].addr);
+							break;
+						}
+						if (i == sizeof(s_table) / sizeof s_table[0] - 1)
+						{
+							error("Undeclared variable is used");
 						}
 					}
 					getsym();
@@ -330,6 +350,11 @@ void expression(void)
 						if (strcmp(s_table[i].v, tok.charvalue) == 0)
 						{
 							fprintf(outfile, "mul r0, %d\n", s_table[i].addr);
+							break;
+						}
+						if (i == sizeof(s_table) / sizeof s_table[0] - 1)
+						{
+							error("Undeclared variable is used");
 						}
 					}
 					getsym();
@@ -358,6 +383,11 @@ void expression(void)
 					if (strcmp(s_table[i].v, tok.charvalue) == 0)
 					{
 						fprintf(outfile, "div r0, %d\n", s_table[i].addr);
+						break;
+					}
+					if (i == sizeof(s_table) / sizeof s_table[0] - 1)
+					{
+						error("Undeclared variable is used");
 					}
 				}
 				getsym();
@@ -375,6 +405,11 @@ void expression(void)
 			if (strcmp(s_table[i].v, tok.charvalue) == 0)
 			{
 				fprintf(outfile, "load r0, %d\n", s_table[i].addr);
+				break;
+			}
+			if (i == sizeof(s_table) / sizeof s_table[0] - 1)
+			{
+				error("Undeclared variable is used");
 			}
 		}
 		getsym();
@@ -396,6 +431,11 @@ void expression(void)
 						if (strcmp(s_table[i].v, tok.charvalue) == 0)
 						{
 							fprintf(outfile, "add r0, %d\n", s_table[i].addr);
+							break;
+						}
+						if (i == sizeof(s_table) / sizeof s_table[0] - 1)
+						{
+							error("Undeclared variable is used");
 						}
 					}
 					getsym();
@@ -419,6 +459,11 @@ void expression(void)
 						if (strcmp(s_table[i].v, tok.charvalue) == 0)
 						{
 							fprintf(outfile, "sub r0, %d\n", s_table[i].addr);
+							break;
+						}
+						if (i == sizeof(s_table) / sizeof s_table[0] - 1)
+						{
+							error("Undeclared variable is used");
 						}
 					}
 					getsym();
@@ -442,6 +487,11 @@ void expression(void)
 						if (strcmp(s_table[i].v, tok.charvalue) == 0)
 						{
 							fprintf(outfile, "mul r0, %d\n", s_table[i].addr);
+							break;
+						}
+						if (i == sizeof(s_table) / sizeof s_table[0] - 1)
+						{
+							error("Undeclared variable is used");
 						}
 					}
 					getsym();
@@ -470,6 +520,11 @@ void expression(void)
 					if (strcmp(s_table[i].v, tok.charvalue) == 0)
 					{
 						fprintf(outfile, "div r0, %d\n", s_table[i].addr);
+						break;
+					}
+					if (i == sizeof(s_table) / sizeof s_table[0] - 1)
+					{
+						error("Undeclared variable is used");
 					}
 				}
 				getsym();
