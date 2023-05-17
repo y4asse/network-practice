@@ -271,6 +271,8 @@ void statement(void)
 	}
 }
 
+// 3+4*5*5
+int factorCount = 0;
 void factor(void)
 {
 	if (tok.attr == SYMBOL && tok.value == MINUS)
@@ -283,6 +285,7 @@ void factor(void)
 	}
 	else if (tok.attr == NUMBER)
 	{
+		// fprintf(outfile, "loadi r%d, %d\n", factorCount++, tok.value);
 		getsym();
 	}
 	else if (tok.attr == SYMBOL && tok.value == LPAREN)
@@ -310,8 +313,18 @@ void term(void)
 	factor();
 	while ((tok.attr == SYMBOL && tok.value == TIMES) || (tok.attr == RWORD && tok.value == DIV))
 	{
-		getsym();
-		factor();
+		if (tok.value == TIMES)
+		{
+			getsym();
+			factor();
+			// fprintf(outfile, "mull r1, r2\n");
+		}
+		else
+		{
+			getsym();
+			factor();
+			// fprintf(outfile, "div r1, r2\n");
+		}
 	}
 }
 
@@ -320,8 +333,18 @@ void expression(void)
 	term();
 	while ((tok.attr == SYMBOL && tok.value == PLUS) || (tok.attr == SYMBOL && tok.value == MINUS))
 	{
-		getsym();
-		term();
+		if (tok.value == PLUS)
+		{
+			getsym();
+			term();
+			// fprintf(outfile, "add r0, r1\n");
+		}
+		else
+		{
+			getsym();
+			term();
+			// fprintf(outfile, "sub r0, r1\n");
+		}
 	};
 
 	// if (tok.attr == NUMBER)
