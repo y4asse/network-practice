@@ -285,7 +285,7 @@ void factor(void)
 	}
 	else if (tok.attr == NUMBER)
 	{
-		// fprintf(outfile, "loadi r%d, %d\n", factorCount++, tok.value);
+		fprintf(outfile, "loadi r%d, %d\n", factorCount++, tok.value);
 		getsym();
 	}
 	else if (tok.attr == SYMBOL && tok.value == LPAREN)
@@ -317,14 +317,15 @@ void term(void)
 		{
 			getsym();
 			factor();
-			// fprintf(outfile, "mull r1, r2\n");
+			fprintf(outfile, "mulr r%d, r%d\n", factorCount - 2, factorCount - 1);
 		}
 		else
 		{
 			getsym();
 			factor();
-			// fprintf(outfile, "div r1, r2\n");
+			fprintf(outfile, "divr r1, r2\n");
 		}
+		factorCount--;
 	}
 }
 
@@ -337,14 +338,15 @@ void expression(void)
 		{
 			getsym();
 			term();
-			// fprintf(outfile, "add r0, r1\n");
+			fprintf(outfile, "addr r0, r1\n");
 		}
 		else
 		{
 			getsym();
 			term();
-			// fprintf(outfile, "sub r0, r1\n");
+			fprintf(outfile, "subr r0, r1\n");
 		}
+		factorCount--;
 	};
 
 	// if (tok.attr == NUMBER)
