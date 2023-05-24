@@ -272,7 +272,8 @@ void statement(void)
 }
 
 // 3+4*5*5
-int factorCount = 0;
+int rIndex = 0;
+
 void factor(void)
 {
 	if (tok.attr == SYMBOL && tok.value == MINUS)
@@ -285,13 +286,27 @@ void factor(void)
 	}
 	else if (tok.attr == NUMBER)
 	{
-		fprintf(outfile, "loadi r%d, %d\n", factorCount++, tok.value);
+		fprintf(outfile, "loadi r%d, %d\n", rIndex, tok.value);
+		rIndex++;
 		getsym();
 	}
 	else if (tok.attr == SYMBOL && tok.value == LPAREN)
 	{
 		getsym();
+		for (int i = 0; i < rIndex; i++)
+		{
+			fprintf(outfile, "loadr r%d, r%d\n", i + 2, i);
+		}
+		int tempRIndex = rIndex;
+		rIndex = 0;
 		expression();
+		rIndex = tempRIndex;
+		fprintf(outfile, "loadr r%d, r0\n", rIndex);
+		for (int i = 0; i < rIndex; i++)
+		{
+			fprintf(outfile, "loadr r%d, r%d\n", i, i + 2);
+		}
+		rIndex++;
 
 		if (tok.attr == SYMBOL && tok.value == RPAREN)
 		{
@@ -317,7 +332,7 @@ void term(void)
 		{
 			getsym();
 			factor();
-			fprintf(outfile, "mulr r%d, r%d\n", factorCount - 2, factorCount - 1);
+			fprintf(outfile, "mulr r%d, r%d\n", rIndex - 2, rIndex - 1);
 		}
 		else
 		{
@@ -325,7 +340,7 @@ void term(void)
 			factor();
 			fprintf(outfile, "divr r1, r2\n");
 		}
-		factorCount--;
+		rIndex--;
 	}
 }
 
@@ -346,7 +361,7 @@ void expression(void)
 			term();
 			fprintf(outfile, "subr r0, r1\n");
 		}
-		factorCount--;
+	rIndex--;
 	};
 
 	// if (tok.attr == NUMBER)
