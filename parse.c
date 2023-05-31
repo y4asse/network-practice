@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <getsym.h>
 #include <string.h>
+#define MAX_DATA 32
 
 extern TOKEN tok;
 extern FILE *infile;
@@ -16,6 +17,7 @@ typedef struct
 s_entry s_table[32];
 int tableIndex = 0;
 int labelNumber = 0;
+int dataLabelNumber[] = {};
 
 void error(char *s);
 void statement(void);
@@ -271,9 +273,7 @@ void statement(void)
 	}
 }
 
-// 3+4*5*5
 int rIndex = 0;
-
 void factor(void)
 {
 	if (tok.attr == SYMBOL && tok.value == MINUS)
@@ -282,32 +282,55 @@ void factor(void)
 	}
 	if (tok.attr == IDENTIFIER)
 	{
+		for (int i = 0; i < sizeof(s_table) / sizeof s_table[0]; i++)
+		{
+			if (strcmp(s_table[i].v, tok.charvalue) == 0)
+			{
+				fprintf(outfile, "load r%d, %d\n", rIndex, s_table[i].addr);
+				break;
+			}
+			if (i == sizeof(s_table) / sizeof s_table[0] - 1)
+			{
+				error("Undeclared variable is used");
+			}
+		}
+		rIndex++;
 		getsym();
 	}
 	else if (tok.attr == NUMBER)
 	{
-		fprintf(outfile, "loadi r%d, %d\n", rIndex, tok.value);
+		if (tok.value > 32767 || tok.value < -32767)
+		{
+			fprintf(outfile, "load r%d, DATA1\n", rIndex);
+			fprintf(outfile, "DATA1: data 100000\n");
+		}
+		else
+		{
+			fprintf(outfile, "loadi r%d, %d\n", rIndex, tok.value);
+		}
 		rIndex++;
 		getsym();
 	}
 	else if (tok.attr == SYMBOL && tok.value == LPAREN)
 	{
 		getsym();
-		for (int i = 0; i < rIndex; i++)
-		{
-			fprintf(outfile, "loadr r%d, r%d\n", i + 2, i);
-		}
 		int tempRIndex = rIndex;
+		// レジスタ退避
+		for (int i = 0; i < tempRIndex; i++)
+		{
+			fprintf(outfile, "push r%d\n", i);
+		}
 		rIndex = 0;
 		expression();
 		rIndex = tempRIndex;
+		// expressionの結果をrIndexに格納する
 		fprintf(outfile, "loadr r%d, r0\n", rIndex);
-		for (int i = 0; i < rIndex; i++)
+		// レジスタ復元
+		for (int i = tempRIndex - 1; i >= 0; i--)
 		{
-			fprintf(outfile, "loadr r%d, r%d\n", i, i + 2);
+			fprintf(outfile, "pop r%d\n", i);
 		}
 		rIndex++;
-
 		if (tok.attr == SYMBOL && tok.value == RPAREN)
 		{
 			getsym();
@@ -338,7 +361,7 @@ void term(void)
 		{
 			getsym();
 			factor();
-			fprintf(outfile, "divr r1, r2\n");
+			fprintf(outfile, "divr r%d, r%d\n", rIndex - 2, rIndex - 1);
 		}
 		rIndex--;
 	}
@@ -361,9 +384,9 @@ void expression(void)
 			term();
 			fprintf(outfile, "subr r0, r1\n");
 		}
-	rIndex--;
+		rIndex--;
 	};
-
+	rIndex = 0;
 	// if (tok.attr == NUMBER)
 	// {
 	// 	fprintf(outfile, "loadi r0, %d\n", tok.value);
