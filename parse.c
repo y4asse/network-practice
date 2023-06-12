@@ -15,9 +15,11 @@ typedef struct
 	char v[MAXIDLEN + 1];
 } s_entry;
 s_entry s_table[32];
+int rIndex = 0;
 int tableIndex = 0;
 int labelNumber = 0;
-int dataLabelNumber[] = {};
+int dataLabelNumber[100];
+int dataLabelIndex = 0;
 
 void error(char *s);
 void statement(void);
@@ -53,6 +55,11 @@ void compiler(void)
 
 				if (tok.attr == SYMBOL && tok.value == PERIOD)
 				{
+					fprintf(outfile, "halt\n");
+					for (int i = 0; i < dataLabelIndex; i++)
+					{
+						fprintf(outfile, "Data%d: data %d\n", i, dataLabelNumber[i]);
+					}
 					fprintf(stderr, "Parsing Completed. No errors found.\n");
 				}
 				else
@@ -139,6 +146,7 @@ void inblock(void)
 
 void statement(void)
 {
+	rIndex = 0;
 	if (tok.attr == IDENTIFIER)
 	{
 		int memoryAddress;
@@ -273,7 +281,6 @@ void statement(void)
 	}
 }
 
-int rIndex = 0;
 void factor(void)
 {
 	if (tok.attr == SYMBOL && tok.value == MINUS)
@@ -301,8 +308,8 @@ void factor(void)
 	{
 		if (tok.value > 32767 || tok.value < -32767)
 		{
-			fprintf(outfile, "load r%d, DATA1\n", rIndex);
-			fprintf(outfile, "DATA1: data 100000\n");
+			dataLabelNumber[dataLabelIndex] = tok.value;
+			fprintf(outfile, "load r%d, Data%d\n", rIndex, dataLabelIndex++);
 		}
 		else
 		{
@@ -314,23 +321,7 @@ void factor(void)
 	else if (tok.attr == SYMBOL && tok.value == LPAREN)
 	{
 		getsym();
-		int tempRIndex = rIndex;
-		// レジスタ退避
-		for (int i = 0; i < tempRIndex; i++)
-		{
-			fprintf(outfile, "push r%d\n", i);
-		}
-		rIndex = 0;
 		expression();
-		rIndex = tempRIndex;
-		// expressionの結果をrIndexに格納する
-		fprintf(outfile, "loadr r%d, r0\n", rIndex);
-		// レジスタ復元
-		for (int i = tempRIndex - 1; i >= 0; i--)
-		{
-			fprintf(outfile, "pop r%d\n", i);
-		}
-		rIndex++;
 		if (tok.attr == SYMBOL && tok.value == RPAREN)
 		{
 			getsym();
@@ -376,282 +367,16 @@ void expression(void)
 		{
 			getsym();
 			term();
-			fprintf(outfile, "addr r0, r1\n");
+			fprintf(outfile, "addr r%d, r%d\n", rIndex - 2, rIndex - 1);
 		}
 		else
 		{
 			getsym();
 			term();
-			fprintf(outfile, "subr r0, r1\n");
+			fprintf(outfile, "subr r%d, r%d\n", rIndex - 2, rIndex - 1);
 		}
 		rIndex--;
-	};
-	rIndex = 0;
-	// if (tok.attr == NUMBER)
-	// {
-	// 	fprintf(outfile, "loadi r0, %d\n", tok.value);
-	// 	getsym();
-	// 	if (tok.attr == SYMBOL)
-	// 	{
-	// 		switch (tok.value)
-	// 		{
-	// 		case PLUS:
-	// 			getsym();
-	// 			if (tok.attr == NUMBER)
-	// 			{
-	// 				fprintf(outfile, "addi r0, %d\n", tok.value);
-	// 				getsym();
-	// 			}
-	// 			else if (tok.attr == IDENTIFIER)
-	// 			{
-	// 				for (int i = 0; i < sizeof(s_table) / sizeof s_table[0]; i++)
-	// 				{
-	// 					if (strcmp(s_table[i].v, tok.charvalue) == 0)
-	// 					{
-	// 						fprintf(outfile, "add r0, %d\n", s_table[i].addr);
-	// 						break;
-	// 					}
-	// 					if (i == sizeof(s_table) / sizeof s_table[0] - 1)
-	// 					{
-	// 						error("Undeclared variable is used");
-	// 					}
-	// 				}
-	// 				getsym();
-	// 			}
-	// 			else
-	// 			{
-	// 				error("Second operand should be a number or identifier.");
-	// 			}
-	// 			break;
-	// 		case MINUS:
-	// 			getsym();
-	// 			if (tok.attr == NUMBER)
-	// 			{
-	// 				fprintf(outfile, "subi r0, %d\n", tok.value);
-	// 				getsym();
-	// 			}
-	// 			else if (tok.attr == IDENTIFIER)
-	// 			{
-	// 				for (int i = 0; i < sizeof(s_table) / sizeof s_table[0]; i++)
-	// 				{
-	// 					if (strcmp(s_table[i].v, tok.charvalue) == 0)
-	// 					{
-	// 						fprintf(outfile, "sub r0, %d\n", s_table[i].addr);
-	// 						break;
-	// 					}
-	// 					if (i == sizeof(s_table) / sizeof s_table[0] - 1)
-	// 					{
-	// 						error("Undeclared variable is used");
-	// 					}
-	// 				}
-	// 				getsym();
-	// 			}
-	// 			else
-	// 			{
-	// 				error("Second operand should be a number or identifier.");
-	// 			}
-	// 			break;
-	// 		case TIMES:
-	// 			getsym();
-	// 			if (tok.attr == NUMBER)
-	// 			{
-	// 				fprintf(outfile, "muli r0, %d\n", tok.value);
-	// 				getsym();
-	// 			}
-	// 			else if (tok.attr == IDENTIFIER)
-	// 			{
-	// 				for (int i = 0; i < sizeof(s_table) / sizeof s_table[0]; i++)
-	// 				{
-	// 					if (strcmp(s_table[i].v, tok.charvalue) == 0)
-	// 					{
-	// 						fprintf(outfile, "mul r0, %d\n", s_table[i].addr);
-	// 						break;
-	// 					}
-	// 					if (i == sizeof(s_table) / sizeof s_table[0] - 1)
-	// 					{
-	// 						error("Undeclared variable is used");
-	// 					}
-	// 				}
-	// 				getsym();
-	// 			}
-	// 			else
-	// 			{
-	// 				error("Second operand should be a number or identifier.");
-	// 			}
-	// 			break;
-	// 		default:
-	// 			break;
-	// 		}
-	// 	}
-	// 	else if (tok.attr == RWORD && tok.value == DIV)
-	// 	{
-	// 		getsym();
-	// 		if (tok.attr == NUMBER)
-	// 		{
-	// 			fprintf(outfile, "divi r0, %d\n", tok.value);
-	// 			getsym();
-	// 		}
-	// 		else if (tok.attr == IDENTIFIER)
-	// 		{
-	// 			for (int i = 0; i < sizeof(s_table) / sizeof s_table[0]; i++)
-	// 			{
-	// 				if (strcmp(s_table[i].v, tok.charvalue) == 0)
-	// 				{
-	// 					fprintf(outfile, "div r0, %d\n", s_table[i].addr);
-	// 					break;
-	// 				}
-	// 				if (i == sizeof(s_table) / sizeof s_table[0] - 1)
-	// 				{
-	// 					error("Undeclared variable is used");
-	// 				}
-	// 			}
-	// 			getsym();
-	// 		}
-	// 		else
-	// 		{
-	// 			error("Second operand should be a number or identifier.");
-	// 		}
-	// 	}
-	// }
-	// else if (tok.attr == IDENTIFIER)
-	// {
-	// 	for (int i = 0; i < sizeof(s_table) / sizeof s_table[0]; i++)
-	// 	{
-	// 		if (strcmp(s_table[i].v, tok.charvalue) == 0)
-	// 		{
-	// 			fprintf(outfile, "load r0, %d\n", s_table[i].addr);
-	// 			break;
-	// 		}
-	// 		if (i == sizeof(s_table) / sizeof s_table[0] - 1)
-	// 		{
-	// 			error("Undeclared variable is used");
-	// 		}
-	// 	}
-	// 	getsym();
-	// 	if (tok.attr == SYMBOL)
-	// 	{
-	// 		switch (tok.value)
-	// 		{
-	// 		case PLUS:
-	// 			getsym();
-	// 			if (tok.attr == NUMBER)
-	// 			{
-	// 				fprintf(outfile, "addi r0, %d\n", tok.value);
-	// 				getsym();
-	// 			}
-	// 			else if (tok.attr == IDENTIFIER)
-	// 			{
-	// 				for (int i = 0; i < sizeof(s_table) / sizeof s_table[0]; i++)
-	// 				{
-	// 					if (strcmp(s_table[i].v, tok.charvalue) == 0)
-	// 					{
-	// 						fprintf(outfile, "add r0, %d\n", s_table[i].addr);
-	// 						break;
-	// 					}
-	// 					if (i == sizeof(s_table) / sizeof s_table[0] - 1)
-	// 					{
-	// 						error("Undeclared variable is used");
-	// 					}
-	// 				}
-	// 				getsym();
-	// 			}
-	// 			else
-	// 			{
-	// 				error("Second operand should be a number or identifier.");
-	// 			}
-	// 			break;
-	// 		case MINUS:
-	// 			getsym();
-	// 			if (tok.attr == NUMBER)
-	// 			{
-	// 				fprintf(outfile, "subi r0, %d\n", tok.value);
-	// 				getsym();
-	// 			}
-	// 			else if (tok.attr == IDENTIFIER)
-	// 			{
-	// 				for (int i = 0; i < sizeof(s_table) / sizeof s_table[0]; i++)
-	// 				{
-	// 					if (strcmp(s_table[i].v, tok.charvalue) == 0)
-	// 					{
-	// 						fprintf(outfile, "sub r0, %d\n", s_table[i].addr);
-	// 						break;
-	// 					}
-	// 					if (i == sizeof(s_table) / sizeof s_table[0] - 1)
-	// 					{
-	// 						error("Undeclared variable is used");
-	// 					}
-	// 				}
-	// 				getsym();
-	// 			}
-	// 			else
-	// 			{
-	// 				error("Second operand should be a number or identifier.");
-	// 			}
-	// 			break;
-	// 		case TIMES:
-	// 			getsym();
-	// 			if (tok.attr == NUMBER)
-	// 			{
-	// 				fprintf(outfile, "muli r0, %d\n", tok.value);
-	// 				getsym();
-	// 			}
-	// 			else if (tok.attr == IDENTIFIER)
-	// 			{
-	// 				for (int i = 0; i < sizeof(s_table) / sizeof s_table[0]; i++)
-	// 				{
-	// 					if (strcmp(s_table[i].v, tok.charvalue) == 0)
-	// 					{
-	// 						fprintf(outfile, "mul r0, %d\n", s_table[i].addr);
-	// 						break;
-	// 					}
-	// 					if (i == sizeof(s_table) / sizeof s_table[0] - 1)
-	// 					{
-	// 						error("Undeclared variable is used");
-	// 					}
-	// 				}
-	// 				getsym();
-	// 			}
-	// 			else
-	// 			{
-	// 				error("Second operand should be a number or identifier.");
-	// 			}
-	// 			break;
-	// 		default:
-	// 			break;
-	// 		}
-	// 	}
-	// 	else if (tok.attr == RWORD && tok.value == DIV)
-	// 	{
-	// 		getsym();
-	// 		if (tok.attr == NUMBER)
-	// 		{
-	// 			fprintf(outfile, "divi r0, %d\n", tok.value);
-	// 			getsym();
-	// 		}
-	// 		else if (tok.attr == IDENTIFIER)
-	// 		{
-	// 			for (int i = 0; i < sizeof(s_table) / sizeof s_table[0]; i++)
-	// 			{
-	// 				if (strcmp(s_table[i].v, tok.charvalue) == 0)
-	// 				{
-	// 					fprintf(outfile, "div r0, %d\n", s_table[i].addr);
-	// 					break;
-	// 				}
-	// 				if (i == sizeof(s_table) / sizeof s_table[0] - 1)
-	// 				{
-	// 					error("Undeclared variable is used");
-	// 				}
-	// 			}
-	// 			getsym();
-	// 		}
-	// 		else
-	// 		{
-	// 			error("Second operand should be a number or identifier.");
-	// 		}
-	// 	}
-	// }
-	// else
-	// 	error("Number or Identifier is needed");
+	}
 }
 
 // void parmlist(void)
@@ -676,6 +401,7 @@ void expression(void)
 
 void condition(void)
 {
+	rIndex = 0;
 	expression();
 	fprintf(outfile, "loadi r1, 0\n");
 	fprintf(outfile, "addr r1, r0\n");
@@ -713,7 +439,7 @@ void condition(void)
 			break;
 		}
 		expression();
-		fprintf(outfile, "cmpr r1, r0\n");
+		fprintf(outfile, "cmpr r0, r1\n");
 		fprintf(outfile, "%s L%d\n", comp, labelNumber - 2);
 	}
 	else
