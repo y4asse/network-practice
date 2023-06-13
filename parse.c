@@ -24,11 +24,9 @@ int dataLabelIndex = 0;
 void error(char *s);
 void statement(void);
 void outblock(void);
-void inblock(void);
 void statement(void);
 void expression(void);
 void condition(void);
-void parmlist(void);
 
 void compiler(void)
 {
@@ -105,43 +103,7 @@ void outblock(void)
 		else
 			error("Semicolon is needed");
 	}
-
-	// 手続き定義
-	// while (tok.attr == RWORD && tok.value == PROCEDURE)
-	// {
-	// 	getsym();
-
-	// 	if (tok.attr == IDENTIFIER)
-	// 	{
-	// 		getsym();
-	// 		if (tok.attr == SYMBOL && tok.value == SEMICOLON)
-	// 		{
-	// 			getsym();
-	// 			inblock();
-	// 			getsym();
-
-	// 			if (tok.attr == SYMBOL && tok.value == SEMICOLON)
-	// 				getsym();
-	// 			else
-	// 				error("Semicolon is needed.");
-	// 		}
-	// 		else
-	// 			error("Semicolon is needed.");
-	// 	}
-	// 	else
-	// 		error("Procedure name is needed.");
-	// }
-
-	// メインのブロック
 	statement();
-}
-
-void inblock(void)
-{
-	if (tok.attr == RWORD && tok.value == VAR)
-		// var_declaration();
-
-		statement();
 }
 
 void statement(void)
@@ -171,11 +133,6 @@ void statement(void)
 			expression();
 			fprintf(outfile, "store r0, %d\n", memoryAddress);
 		}
-		// else if (tok.attr == SYMBOL && tok.value == LPAREN)
-		// {
-		// 	getsym();
-		// 	parmlist();
-		// }
 		else
 			error("Assignment operator or Left parenthesis is needed.");
 	}
@@ -378,26 +335,6 @@ void expression(void)
 		rIndex--;
 	}
 }
-
-// void parmlist(void)
-// {
-// 	if (tok.attr == SYMBOL && tok.value == LPAREN)
-// 	{
-// 		do
-// 		{
-// 			getsym();
-// 			expression();
-// 		} while (tok.attr == SYMBOL && tok.value == COMMA);
-// 		if (tok.attr == SYMBOL && tok.value == RPAREN)
-// 			getsym();
-// 		else
-// 		{
-// 			error("Right parenthesis is needed.");
-// 		}
-// 	}
-// 	else
-// 		error("Left parenthesis is needed.");
-// }
 
 void condition(void)
 {
